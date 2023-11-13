@@ -9,170 +9,41 @@ pub trait FromValue: Sized {
     fn from_value(value: Value) -> Option<Self>;
 }
 
-impl FromValue for bool {
-    fn from_value(value: Value) -> Option<Self> {
-        if let Value::Bool(value) = value {
-            Some(value)
-        } else {
-            None
+macro_rules! primitive_from_value {
+    ($name:ty, $variant:ident) => {
+        impl FromValue for $name {
+            fn from_value(value: Value) -> Option<Self> {
+                if let Value::$variant(value) = value {
+                    Some(value)
+                } else {
+                    None
+                }
+            }
         }
-    }
+    };
 }
 
-impl FromValue for char {
-    fn from_value(value: Value) -> Option<Self> {
-        if let Value::Char(value) = value {
-            Some(value)
-        } else {
-            None
-        }
-    }
-}
-
-impl FromValue for f32 {
-    fn from_value(value: Value) -> Option<Self> {
-        if let Value::F32(value) = value {
-            Some(value)
-        } else {
-            None
-        }
-    }
-}
-
-impl FromValue for f64 {
-    fn from_value(value: Value) -> Option<Self> {
-        if let Value::F64(value) = value {
-            Some(value)
-        } else {
-            None
-        }
-    }
-}
-
-impl FromValue for i128 {
-    fn from_value(value: Value) -> Option<Self> {
-        if let Value::I128(value) = value {
-            Some(value)
-        } else {
-            None
-        }
-    }
-}
-
-impl FromValue for i16 {
-    fn from_value(value: Value) -> Option<Self> {
-        if let Value::I16(value) = value {
-            Some(value)
-        } else {
-            None
-        }
-    }
-}
-
-impl FromValue for i32 {
-    fn from_value(value: Value) -> Option<Self> {
-        if let Value::I32(value) = value {
-            Some(value)
-        } else {
-            None
-        }
-    }
-}
-
-impl FromValue for i64 {
-    fn from_value(value: Value) -> Option<Self> {
-        if let Value::I64(value) = value {
-            Some(value)
-        } else {
-            None
-        }
-    }
-}
-
-impl FromValue for i8 {
-    fn from_value(value: Value) -> Option<Self> {
-        if let Value::I8(value) = value {
-            Some(value)
-        } else {
-            None
-        }
-    }
-}
-
-impl FromValue for isize {
-    fn from_value(value: Value) -> Option<Self> {
-        if let Value::Isize(value) = value {
-            Some(value)
-        } else {
-            None
-        }
-    }
-}
+primitive_from_value!(bool, Bool);
+primitive_from_value!(char, Char);
+primitive_from_value!(f32, F32);
+primitive_from_value!(f64, F64);
+primitive_from_value!(i128, I128);
+primitive_from_value!(i16, I16);
+primitive_from_value!(i32, I32);
+primitive_from_value!(i64, I64);
+primitive_from_value!(i8, I8);
+primitive_from_value!(isize, Isize);
+primitive_from_value!(u128, U128);
+primitive_from_value!(u16, U16);
+primitive_from_value!(u32, U32);
+primitive_from_value!(u64, U64);
+primitive_from_value!(u8, U8);
+primitive_from_value!(usize, Usize);
 
 impl FromValue for String {
     fn from_value(value: valuable::Value<'_>) -> Option<Self> {
         if let Value::String(content) = value {
             Some(content.to_string())
-        } else {
-            None
-        }
-    }
-}
-
-impl FromValue for u128 {
-    fn from_value(value: Value) -> Option<Self> {
-        if let Value::U128(value) = value {
-            Some(value)
-        } else {
-            None
-        }
-    }
-}
-
-impl FromValue for u16 {
-    fn from_value(value: Value) -> Option<Self> {
-        if let Value::U16(value) = value {
-            Some(value)
-        } else {
-            None
-        }
-    }
-}
-
-impl FromValue for u32 {
-    fn from_value(value: Value) -> Option<Self> {
-        if let Value::U32(value) = value {
-            Some(value)
-        } else {
-            None
-        }
-    }
-}
-
-impl FromValue for u64 {
-    fn from_value(value: Value) -> Option<Self> {
-        if let Value::U64(value) = value {
-            Some(value)
-        } else {
-            None
-        }
-    }
-}
-
-impl FromValue for u8 {
-    fn from_value(value: Value) -> Option<Self> {
-        if let Value::U8(value) = value {
-            Some(value)
-        } else {
-            None
-        }
-    }
-}
-
-impl FromValue for usize {
-    fn from_value(value: Value) -> Option<Self> {
-        if let Value::Usize(value) = value {
-            Some(value)
         } else {
             None
         }
