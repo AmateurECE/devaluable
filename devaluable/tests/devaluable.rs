@@ -3,7 +3,7 @@
 use devaluable::FromValue;
 use valuable::Valuable;
 
-#[derive(PartialEq, Debug, Valuable, FromValue)]
+#[derive(PartialEq, Debug, Default, Valuable, FromValue)]
 struct OneStringStruct {
     message: String,
 }
