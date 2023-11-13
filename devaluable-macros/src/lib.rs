@@ -61,7 +61,8 @@ impl Collector {
                     let field_type = &field.ty;
                     quote::quote! {
                         #string => {
-                            if let Some(#name) = #field_type::from_value(#value) {
+                            let result: Option<#field_type> = ::devaluable::FromValue::from_value(#value);
+                            if let Some(#name) = result {
                                 self.0.#name = #name;
                             }
                         }
