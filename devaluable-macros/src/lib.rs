@@ -21,6 +21,8 @@ impl Collector {
         let (impl_generics, collector_generics, where_clause) = collector_generics.split_for_impl();
         let (_, type_generics, _) = input.generics.split_for_impl();
 
+        let value = proc_macro2::Ident::new("value", Span::call_site());
+        let arms = Collector::match_clauses(input.data, quote::quote!(*#value));
         Self {
             definitions: quote::quote! {
                 struct #collector_name #collector_generics (& #lifetime mut #name #type_generics)
@@ -33,11 +35,45 @@ impl Collector {
                     }
 
                     fn visit_named_fields(&mut self, named_values: &::valuable::NamedValues<'_>) {
-                        unimplemented!()
+                        named_values.iter().for_each(|(field, #value)| {
+                            match field.name() {
+                                #arms
+                                _ => {}
+                            }
+                        });
                     }
                 }
             },
             name: collector_name,
+        }
+    }
+
+    fn match_clauses(data: syn::Data, value: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
+        match data {
+            syn::Data::Struct(data_struct) => {
+                let arms = data_struct.fields.iter().map(|field| {
+                    let string = field
+                        .ident
+                        .as_ref()
+                        .expect("Unnamed fields are not supported")
+                        .to_string();
+                    let name = &field.ident;
+                    let field_type = &field.ty;
+                    quote::quote! {
+                        #string => {
+                            if let Some(#name) = #field_type::from_value(#value) {
+                                self.0.#name = #name;
+                            }
+                        }
+                    }
+                });
+
+                quote::quote! {
+                    #(#arms)*
+                }
+            }
+            syn::Data::Enum(_) => todo!(),
+            syn::Data::Union(_) => todo!(),
         }
     }
 }
