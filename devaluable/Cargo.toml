@@ -1,0 +1,19 @@
+[package]
+name = "devaluable"
+version = "0.1.0"
+edition = "2021"
+description = "Construct objects from Value instances"
+authors = ["Ethan D. Twardy <ethan.twardy@gmail.com>"]
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/AmateurECE/devaluable"
+documentation = "https://docs.rs/devaluable"
+repository = "https://github.com/AmateurECE/devaluable"
+readme = "../README.md"
+keywords = ["valuable"]
+
+[dependencies]
+devaluable-macros = { version = "0.1.0", path = "../devaluable-macros" }
+valuable = { version = "0.1.0", default-features = false }
+
+[dev-dependencies]
+valuable = { version = "0.1.0", default-features = true, features = ["derive"]}

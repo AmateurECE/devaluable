@@ -1,0 +1,19 @@
+[package]
+name = "devaluable-macros"
+version = "0.1.0"
+edition = "2021"
+description = "Macros for devaluable"
+authors = ["Ethan D. Twardy <ethan.twardy@gmail.com>"]
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/AmateurECE/devaluable"
+documentation = "https://docs.rs/devaluable"
+repository = "https://github.com/AmateurECE/devaluable"
+readme = "README.md"
+keywords = ["valuable"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = { version = "1.0.33", default-features = false }
+syn = "2.0.39"
