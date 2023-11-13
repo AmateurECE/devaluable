@@ -140,6 +140,19 @@ fn string() {
 }
 
 #[test]
+fn primitive_unit() {
+    let input = ();
+    let output: Option<()> = FromValue::from_value(input.as_value());
+    assert!(output.is_some());
+    assert_eq!(input, output.unwrap());
+}
+
+#[test]
+fn enumerable() {
+    todo!()
+}
+
+#[test]
 fn option_struct() {
     todo!()
 }
@@ -198,14 +211,6 @@ fn primitive_u8() {
 fn primitive_usize() {
     let input = 12;
     let output = usize::from_value(input.as_value());
-    assert!(output.is_some());
-    assert_eq!(input, output.unwrap());
-}
-
-#[test]
-fn primitive_unit() {
-    let input = ();
-    let output: Option<()> = FromValue::from_value(input.as_value());
     assert!(output.is_some());
     assert_eq!(input, output.unwrap());
 }
