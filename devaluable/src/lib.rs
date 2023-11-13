@@ -11,61 +11,101 @@ pub trait FromValue: Sized {
 
 impl FromValue for bool {
     fn from_value(value: Value) -> Option<Self> {
-        todo!()
+        if let Value::Bool(value) = value {
+            Some(value)
+        } else {
+            None
+        }
     }
 }
 
 impl FromValue for char {
     fn from_value(value: Value) -> Option<Self> {
-        todo!()
+        if let Value::Char(value) = value {
+            Some(value)
+        } else {
+            None
+        }
     }
 }
 
 impl FromValue for f32 {
     fn from_value(value: Value) -> Option<Self> {
-        todo!()
+        if let Value::F32(value) = value {
+            Some(value)
+        } else {
+            None
+        }
     }
 }
 
 impl FromValue for f64 {
     fn from_value(value: Value) -> Option<Self> {
-        todo!()
+        if let Value::F64(value) = value {
+            Some(value)
+        } else {
+            None
+        }
     }
 }
 
 impl FromValue for i128 {
     fn from_value(value: Value) -> Option<Self> {
-        todo!()
+        if let Value::I128(value) = value {
+            Some(value)
+        } else {
+            None
+        }
     }
 }
 
 impl FromValue for i16 {
     fn from_value(value: Value) -> Option<Self> {
-        todo!()
+        if let Value::I16(value) = value {
+            Some(value)
+        } else {
+            None
+        }
     }
 }
 
 impl FromValue for i32 {
     fn from_value(value: Value) -> Option<Self> {
-        todo!()
+        if let Value::I32(value) = value {
+            Some(value)
+        } else {
+            None
+        }
     }
 }
 
 impl FromValue for i64 {
     fn from_value(value: Value) -> Option<Self> {
-        todo!()
+        if let Value::I64(value) = value {
+            Some(value)
+        } else {
+            None
+        }
     }
 }
 
 impl FromValue for i8 {
     fn from_value(value: Value) -> Option<Self> {
-        todo!()
+        if let Value::I8(value) = value {
+            Some(value)
+        } else {
+            None
+        }
     }
 }
 
 impl FromValue for isize {
     fn from_value(value: Value) -> Option<Self> {
-        todo!()
+        if let Value::Isize(value) = value {
+            Some(value)
+        } else {
+            None
+        }
     }
 }
 
