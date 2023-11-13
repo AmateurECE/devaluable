@@ -15,5 +15,6 @@ keywords = ["valuable"]
 proc-macro = true
 
 [dependencies]
+proc-macro2 = "1.0.69"
 quote = { version = "1.0.33", default-features = false }
 syn = "2.0.39"
