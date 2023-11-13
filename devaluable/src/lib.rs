@@ -119,6 +119,76 @@ impl FromValue for String {
     }
 }
 
+impl FromValue for u128 {
+    fn from_value(value: Value) -> Option<Self> {
+        if let Value::U128(value) = value {
+            Some(value)
+        } else {
+            None
+        }
+    }
+}
+
+impl FromValue for u16 {
+    fn from_value(value: Value) -> Option<Self> {
+        if let Value::U16(value) = value {
+            Some(value)
+        } else {
+            None
+        }
+    }
+}
+
+impl FromValue for u32 {
+    fn from_value(value: Value) -> Option<Self> {
+        if let Value::U32(value) = value {
+            Some(value)
+        } else {
+            None
+        }
+    }
+}
+
+impl FromValue for u64 {
+    fn from_value(value: Value) -> Option<Self> {
+        if let Value::U64(value) = value {
+            Some(value)
+        } else {
+            None
+        }
+    }
+}
+
+impl FromValue for u8 {
+    fn from_value(value: Value) -> Option<Self> {
+        if let Value::U8(value) = value {
+            Some(value)
+        } else {
+            None
+        }
+    }
+}
+
+impl FromValue for usize {
+    fn from_value(value: Value) -> Option<Self> {
+        if let Value::Usize(value) = value {
+            Some(value)
+        } else {
+            None
+        }
+    }
+}
+
+impl FromValue for () {
+    fn from_value(value: Value) -> Option<Self> {
+        if let Value::Unit = value {
+            Some(())
+        } else {
+            None
+        }
+    }
+}
+
 struct VecCollector<'a, V>(pub &'a mut Vec<V>)
 where
     V: FromValue;

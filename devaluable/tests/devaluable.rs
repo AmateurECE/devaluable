@@ -112,3 +112,100 @@ fn primitive_isize() {
     assert!(output.is_some());
     assert_eq!(input, output.unwrap());
 }
+
+#[test]
+fn listable() {
+    let input: Vec<i64> = vec![0, 1, 2, 3];
+    let output = Vec::<i64>::from_value(input.as_value());
+    assert!(output.is_some());
+    assert_eq!(input, output.unwrap());
+}
+
+#[test]
+fn mappable() {
+    todo!()
+}
+
+#[test]
+fn path() {
+    todo!()
+}
+
+#[test]
+fn string() {
+    let input = "Test".to_string();
+    let output = String::from_value(input.as_value());
+    assert!(output.is_some());
+    assert_eq!(input, output.unwrap());
+}
+
+#[test]
+fn option_struct() {
+    todo!()
+}
+
+#[test]
+fn option() {
+    todo!()
+}
+
+#[test]
+fn composite_struct() {
+    todo!()
+}
+
+#[test]
+fn primitive_u128() {
+    let input = 12;
+    let output = u128::from_value(input.as_value());
+    assert!(output.is_some());
+    assert_eq!(input, output.unwrap());
+}
+
+#[test]
+fn primitive_u16() {
+    let input = 12;
+    let output = u16::from_value(input.as_value());
+    assert!(output.is_some());
+    assert_eq!(input, output.unwrap());
+}
+
+#[test]
+fn primitive_u32() {
+    let input = 12;
+    let output = u32::from_value(input.as_value());
+    assert!(output.is_some());
+    assert_eq!(input, output.unwrap());
+}
+
+#[test]
+fn primitive_u64() {
+    let input = 12;
+    let output = u64::from_value(input.as_value());
+    assert!(output.is_some());
+    assert_eq!(input, output.unwrap());
+}
+
+#[test]
+fn primitive_u8() {
+    let input = 12;
+    let output = u8::from_value(input.as_value());
+    assert!(output.is_some());
+    assert_eq!(input, output.unwrap());
+}
+
+#[test]
+fn primitive_usize() {
+    let input = 12;
+    let output = usize::from_value(input.as_value());
+    assert!(output.is_some());
+    assert_eq!(input, output.unwrap());
+}
+
+#[test]
+fn primitive_unit() {
+    let input = ();
+    let output: Option<()> = FromValue::from_value(input.as_value());
+    assert!(output.is_some());
+    assert_eq!(input, output.unwrap());
+}
