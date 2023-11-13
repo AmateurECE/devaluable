@@ -8,3 +8,13 @@ pub use devaluable_macros::FromValue;
 pub trait FromValue: Sized {
     fn from_value(value: Value) -> Option<Self>;
 }
+
+impl FromValue for String {
+    fn from_value(value: valuable::Value<'_>) -> Option<Self> {
+        if let Value::String(content) = value {
+            Some(content.to_string())
+        } else {
+            None
+        }
+    }
+}
