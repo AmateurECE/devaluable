@@ -1,4 +1,4 @@
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap, hash::Hash, path::PathBuf};
 
 use valuable::Value;
 
@@ -46,6 +46,16 @@ impl FromValue for String {
     fn from_value(value: valuable::Value<'_>) -> Option<Self> {
         if let Value::String(content) = value {
             Some(content.to_string())
+        } else {
+            None
+        }
+    }
+}
+
+impl FromValue for PathBuf {
+    fn from_value(value: Value) -> Option<Self> {
+        if let Value::Path(path) = value {
+            Some(PathBuf::from(path))
         } else {
             None
         }
