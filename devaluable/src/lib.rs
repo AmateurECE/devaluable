@@ -72,11 +72,8 @@ where
     V: FromValue,
 {
     fn visit_entry(&mut self, key: Value<'_>, value: Value<'_>) {
-        match (K::from_value(key), V::from_value(value)) {
-            (Some(key), Some(value)) => {
-                self.0.insert(key, value);
-            }
-            _ => {}
+        if let (Some(key), Some(value)) = (K::from_value(key), V::from_value(value)) {
+            self.0.insert(key, value);
         }
     }
 
