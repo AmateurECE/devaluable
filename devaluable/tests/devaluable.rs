@@ -1,6 +1,7 @@
 #![allow(non_upper_case_globals)]
 
 use devaluable::FromValue;
+use std::collections::HashMap;
 use valuable::Valuable;
 
 #[derive(PartialEq, Debug, Default, Valuable, FromValue)]
@@ -123,7 +124,12 @@ fn listable() {
 
 #[test]
 fn mappable() {
-    todo!()
+    let mut input = HashMap::new();
+    input.insert("Foo".to_string(), "Bar".to_string());
+    input.insert("Baz".to_string(), "Luhrmann".to_string());
+    let output = HashMap::<String, String>::from_value(input.as_value());
+    assert!(output.is_some());
+    assert_eq!(input, output.unwrap());
 }
 
 #[test]

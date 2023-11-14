@@ -1,3 +1,5 @@
+use std::{collections::HashMap, hash::Hash};
+
 use valuable::Value;
 
 pub use devaluable_macros::FromValue;
@@ -60,6 +62,48 @@ impl FromValue for () {
     }
 }
 
+struct MapCollector<'a, K, V>(pub &'a mut HashMap<K, V>)
+where
+    K: FromValue,
+    V: FromValue;
+impl<K, V> valuable::Visit for MapCollector<'_, K, V>
+where
+    K: FromValue + Eq + Hash,
+    V: FromValue,
+{
+    fn visit_entry(&mut self, key: Value<'_>, value: Value<'_>) {
+        match (K::from_value(key), V::from_value(value)) {
+            (Some(key), Some(value)) => {
+                self.0.insert(key, value);
+            }
+            _ => {}
+        }
+    }
+
+    fn visit_value(&mut self, _: Value<'_>) {
+        // Unreachable because from_value checks that the value is a Mappable,
+        // and calls visit on the Mappable instance.
+        unreachable!()
+    }
+}
+
+impl<K, V> FromValue for HashMap<K, V>
+where
+    K: FromValue + Eq + Hash,
+    V: FromValue,
+{
+    fn from_value(value: Value) -> Option<Self> {
+        if let Value::Mappable(map) = value {
+            let mut hash_map: HashMap<K, V> = HashMap::new();
+            let mut collector = MapCollector(&mut hash_map);
+            map.visit(&mut collector);
+            Some(hash_map)
+        } else {
+            None
+        }
+    }
+}
+
 struct VecCollector<'a, V>(pub &'a mut Vec<V>)
 where
     V: FromValue;
@@ -68,10 +112,10 @@ impl<V> valuable::Visit for VecCollector<'_, V>
 where
     V: FromValue,
 {
-    fn visit_value(&mut self, value: Value<'_>) {
-        if let Some(content) = V::from_value(value) {
-            self.0.push(content);
-        }
+    fn visit_value(&mut self, _: Value<'_>) {
+        // Unreachable because from_value checks that the value is a Listable,
+        // and calls visit on the Listable instance.
+        unreachable!()
     }
 
     fn visit_primitive_slice(&mut self, slice: valuable::Slice<'_>) {
