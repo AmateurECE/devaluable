@@ -42,6 +42,13 @@ primitive_from_value!(u64, U64);
 primitive_from_value!(u8, U8);
 primitive_from_value!(usize, Usize);
 
+impl<T> FromValue for Option<T>
+where T: FromValue {
+    fn from_value(value: Value) -> Option<Self> {
+        Some(T::from_value(value))
+    }
+}
+
 impl FromValue for String {
     fn from_value(value: valuable::Value<'_>) -> Option<Self> {
         if let Value::String(content) = value {
