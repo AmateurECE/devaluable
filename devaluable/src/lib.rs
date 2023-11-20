@@ -62,16 +62,6 @@ impl FromValue for PathBuf {
     }
 }
 
-impl FromValue for () {
-    fn from_value(value: Value) -> Option<Self> {
-        if let Value::Unit = value {
-            Some(())
-        } else {
-            None
-        }
-    }
-}
-
 struct MapCollector<'a, K, V>(pub &'a mut HashMap<K, V>)
 where
     K: FromValue,

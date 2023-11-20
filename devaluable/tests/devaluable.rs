@@ -149,14 +149,6 @@ fn string() {
 }
 
 #[test]
-fn primitive_unit() {
-    let input = ();
-    let output: Option<()> = FromValue::from_value(input.as_value());
-    assert!(output.is_some());
-    assert_eq!(input, output.unwrap());
-}
-
-#[test]
 fn enumerable() {
     todo!()
 }
