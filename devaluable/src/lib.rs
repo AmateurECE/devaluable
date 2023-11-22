@@ -43,7 +43,9 @@ primitive_from_value!(u8, U8);
 primitive_from_value!(usize, Usize);
 
 impl<T> FromValue for Option<T>
-where T: FromValue {
+where
+    T: FromValue,
+{
     fn from_value(value: Value) -> Option<Self> {
         Some(T::from_value(value))
     }
