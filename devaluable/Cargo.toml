@@ -13,7 +13,7 @@ keywords = ["valuable"]
 
 [dependencies]
 devaluable-macros = { version = "0.1.0", path = "../devaluable-macros" }
-valuable = { version = "0.1.0", default-features = false }
+valuable = { version = "0.1.0", default-features = true }
 
 [dev-dependencies]
 valuable = { version = "0.1.0", default-features = true, features = ["derive"]}
