@@ -7,7 +7,7 @@ struct Collector {
 }
 
 impl Collector {
-    fn new(input: DeriveInput) -> Self {
+    fn new(input: &DeriveInput) -> Self {
         let collector_name =
             proc_macro2::Ident::new(&(input.ident.to_string() + "Collector"), Span::call_site());
         let name = &input.ident;
@@ -22,7 +22,7 @@ impl Collector {
         let (_, type_generics, _) = input.generics.split_for_impl();
 
         let value = proc_macro2::Ident::new("value", Span::call_site());
-        let arms = Collector::match_clauses(input.data, quote::quote!(*#value));
+        let arms = Collector::match_clauses(&input.data, quote::quote!(*#value));
         Self {
             definitions: quote::quote! {
                 struct #collector_name #collector_generics (& #lifetime mut #name #type_generics)
@@ -48,7 +48,10 @@ impl Collector {
         }
     }
 
-    fn match_clauses(data: syn::Data, value: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
+    fn match_clauses(
+        data: &syn::Data,
+        value: proc_macro2::TokenStream,
+    ) -> proc_macro2::TokenStream {
         match data {
             syn::Data::Struct(data_struct) => {
                 let arms = data_struct.fields.iter().map(|field| {
@@ -82,9 +85,9 @@ impl Collector {
 #[proc_macro_derive(FromValue)]
 pub fn derive_from_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = syn::parse_macro_input!(input as DeriveInput);
-    let collector = Collector::new(input.clone());
+    let collector = Collector::new(&input);
     let (impl_generics, type_generics, where_clause) = input.generics.split_for_impl();
-    let name = input.ident.clone();
+    let name = input.ident;
 
     let collector_definitions = collector.definitions;
     let collector_name = collector.name;

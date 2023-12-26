@@ -39,6 +39,25 @@ struct UnnamedStruct(String);
 
 #[derive(Default)]
 struct UnnamedStructVisitor(String);
+impl ::valuable::Visit for UnnamedStructVisitor {
+    fn visit_value(&mut self, _value: ::valuable::Value<'_>) {
+        unreachable!()
+    }
+
+    fn visit_unnamed_fields(&mut self, values: &[::valuable::Value<'_>]) {
+        let mut iter = values.iter();
+        self.0 = iter
+            .next()
+            .and_then(|value| ::devaluable::FromValue::from_value(*value))
+            .unwrap_or(::std::default::Default::default());
+    }
+}
+impl Into<UnnamedStruct> for UnnamedStructVisitor {
+    fn into(self) -> UnnamedStruct {
+        UnnamedStruct(self.0)
+    }
+}
+
 impl ::devaluable::FromValue for UnnamedStruct {
     fn from_value(value: ::valuable::Value) -> Option<Self> {
         if let ::valuable::Value::Structable(data) = value {
@@ -57,24 +76,6 @@ impl ::devaluable::FromValue for UnnamedStruct {
         } else {
             None
         }
-    }
-}
-impl ::valuable::Visit for UnnamedStructVisitor {
-    fn visit_value(&mut self, _value: ::valuable::Value<'_>) {
-        unreachable!()
-    }
-
-    fn visit_unnamed_fields(&mut self, values: &[::valuable::Value<'_>]) {
-        let mut iter = values.iter();
-        self.0 = iter
-            .next()
-            .and_then(|value| ::devaluable::FromValue::from_value(*value))
-            .unwrap_or(::std::default::Default::default());
-    }
-}
-impl Into<UnnamedStruct> for UnnamedStructVisitor {
-    fn into(self) -> UnnamedStruct {
-        UnnamedStruct(self.0)
     }
 }
 
