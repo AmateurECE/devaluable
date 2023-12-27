@@ -1,5 +1,5 @@
 use proc_macro2::Span;
-use syn::{DeriveInput, Lifetime, LifetimeParam};
+use syn::DeriveInput;
 
 trait FromValueImpl {
     fn expand(self) -> proc_macro::TokenStream;
@@ -7,9 +7,9 @@ trait FromValueImpl {
 
 struct NamedFieldVisitorImpl {
     ident: proc_macro2::Ident,
-    target_type: proc_macro2::Ident,
     generics: syn::Generics,
     data: syn::Data,
+    target: proc_macro2::Ident,
 }
 
 impl NamedFieldVisitorImpl {
@@ -19,7 +19,7 @@ impl NamedFieldVisitorImpl {
                 &(input.ident.to_string() + "Visitor"),
                 Span::call_site(),
             ),
-            target_type: input.ident,
+            target: input.ident,
             generics: input.generics,
             data: input.data,
         }
@@ -29,33 +29,63 @@ impl NamedFieldVisitorImpl {
         &self.ident
     }
 
-    fn signatures(&self) -> (proc_macro2::TokenStream, proc_macro2::TokenStream) {
-        let lifetime = Lifetime::new("'refvisitor", Span::call_site());
-        let mut visitor_generics = self.generics.clone();
-        visitor_generics
-            .params
-            .push(syn::GenericParam::Lifetime(LifetimeParam::new(
-                lifetime.clone(),
-            )));
-        let (impl_generics, visitor_generics, where_clause) = visitor_generics.split_for_impl();
-
-        let target_ident = &self.target_type;
+    fn definition(&self) -> proc_macro2::TokenStream {
         let visitor_ident = &self.ident;
-        let (_, type_generics, _) = self.generics.split_for_impl();
+        let (_, type_generics, where_clause) = self.generics.split_for_impl();
+        let data = match &self.data {
+            syn::Data::Struct(data) => data,
+            _ => panic!("Expected struct, found enum or union"),
+        };
+        let fields = data.fields.iter().map(|field| {
+            let ident = &field.ident;
+            let ty = &field.ty;
+            quote::quote!(#ident: #ty)
+        });
 
-        let definition = quote::quote! {
-            struct #visitor_ident #visitor_generics (& #lifetime mut #target_ident #type_generics)
-                #where_clause;
+        quote::quote! {
+            #[derive(Default)]
+            struct #visitor_ident #type_generics #where_clause {
+                #(#fields ,)*
+            }
+        }
+    }
+
+    fn into_target_impl(&self) -> proc_macro2::TokenStream {
+        let visitor_type = &self.ident;
+        let target_type = &self.target;
+        let (impl_generics, type_generics, where_clause) = self.generics.split_for_impl();
+
+        let data = match &self.data {
+            syn::Data::Struct(data) => data,
+            _ => panic!("Expected struct, found enum or union"),
         };
-        let impl_expression = quote::quote! {
-            impl #impl_generics ::valuable::Visit for #visitor_ident #visitor_generics
-                #where_clause
-        };
-        (definition, impl_expression)
+        let fields = data.fields.iter().map(|field| {
+            let ident = &field.ident;
+            quote::quote!(#ident: self.#ident)
+        });
+
+        quote::quote! {
+            impl #impl_generics Into<#target_type> for #visitor_type #type_generics #where_clause {
+                fn into(self) -> #target_type {
+                    #target_type {
+                        #(#fields ,)*
+                    }
+                }
+            }
+        }
     }
 
     fn expand(self) -> proc_macro2::TokenStream {
-        let data = match &self.data {
+        let definition = self.definition();
+        let into_target_impl = self.into_target_impl();
+        let Self {
+            ident: visitor_ident,
+            generics,
+            data,
+            ..
+        } = self;
+        let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
+        let data = match data {
             syn::Data::Struct(data) => data,
             _ => panic!("Expected struct, found enum or union"),
         };
@@ -65,22 +95,23 @@ impl NamedFieldVisitorImpl {
                 .as_ref()
                 .expect("Unnamed fields are not supported")
                 .to_string();
-            let name = &field.ident;
-            let field_type = &field.ty;
+            let ident = &field.ident;
+            let ty = &field.ty;
             quote::quote! {
                 #string => {
-                    let result: Option<#field_type> = ::devaluable::FromValue::from_value(*value);
-                    if let Some(#name) = result {
-                        self.0.#name = #name;
+                    let result: Option<#ty> = ::devaluable::FromValue::from_value(*value);
+                    if let Some(#ident) = result {
+                        self.#ident = #ident;
                     }
                 }
             }
         });
 
-        let (definition, impl_expression) = self.signatures();
         quote::quote! {
             #definition
-            #impl_expression
+            #into_target_impl
+            impl #impl_generics ::valuable::Visit for #visitor_ident #type_generics
+                #where_clause
             {
                 fn visit_value(&mut self, _: ::valuable::Value<'_>) {
                     unreachable!()
@@ -134,10 +165,9 @@ impl FromValueImpl for StructFromValueImpl {
             {
                 fn from_value(value: ::valuable::Value) -> Option<Self> {
                     if let ::valuable::Value::Structable(structable) = value {
-                        let mut result = Self::default();
-                        let mut visitor = #visitor_type (&mut result);
+                        let mut visitor: #visitor_type = ::core::default::Default::default();
                         structable.visit(&mut visitor);
-                        Some(result)
+                        Some(visitor.into())
                     } else {
                         None
                     }
