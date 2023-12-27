@@ -1,20 +1,20 @@
-use syn::{FieldsNamed, Generics};
+use syn::FieldsNamed;
+
+use crate::{IntoImplFactory, StatementFactory, VisitImplFactory};
 
 pub struct NamedFieldVisitor {
-    pub(crate) ident: proc_macro2::Ident,
-    pub(crate) generics: Generics,
     pub(crate) data: FieldsNamed,
-    pub(crate) target: proc_macro2::Ident,
+    pub(crate) target_factory: StatementFactory,
+    pub(crate) visitor_factory: StatementFactory,
 }
 
 impl crate::VisitorImpl for NamedFieldVisitor {
     fn ident(&self) -> &proc_macro2::Ident {
-        &self.ident
+        self.visitor_factory.ident()
     }
 
     fn definition(&self) -> proc_macro2::TokenStream {
-        let visitor_ident = &self.ident;
-        let (_, type_generics, where_clause) = self.generics.split_for_impl();
+        let definition = self.visitor_factory.make_definition();
         let fields = self.data.named.iter().map(|field| {
             let ident = &field.ident;
             let ty = &field.ty;
@@ -23,36 +23,31 @@ impl crate::VisitorImpl for NamedFieldVisitor {
 
         quote::quote! {
             #[derive(Default)]
-            struct #visitor_ident #type_generics #where_clause {
+            #definition {
                 #(#fields ,)*
             }
         }
     }
 
     fn into_target_impl(&self) -> proc_macro2::TokenStream {
-        let visitor_type = &self.ident;
-        let target_type = &self.target;
-        let (impl_generics, type_generics, where_clause) = self.generics.split_for_impl();
-
         let fields = self.data.named.iter().map(|field| {
             let ident = &field.ident;
             quote::quote!(#ident: self.#ident)
         });
 
-        quote::quote! {
-            impl #impl_generics Into<#target_type> for #visitor_type #type_generics #where_clause {
-                fn into(self) -> #target_type {
-                    #target_type {
-                        #(#fields ,)*
-                    }
+        let target_type = self.target_factory.ident();
+        let factory = IntoImplFactory(&self.visitor_factory);
+        factory.make(
+            &quote::quote!(#target_type),
+            quote::quote! {
+                #target_type {
+                    #(#fields ,)*
                 }
-            }
-        }
+            },
+        )
     }
 
     fn visit_impl(&self) -> proc_macro2::TokenStream {
-        let visitor_ident = &self.ident;
-        let (impl_generics, type_generics, where_clause) = self.generics.split_for_impl();
         let arms = self.data.named.iter().map(|field| {
             let string = field
                 .ident
@@ -71,23 +66,14 @@ impl crate::VisitorImpl for NamedFieldVisitor {
             }
         });
 
-        quote::quote! {
-            impl #impl_generics ::valuable::Visit for #visitor_ident #type_generics
-                #where_clause
-            {
-                fn visit_value(&mut self, _: ::valuable::Value<'_>) {
-                    unreachable!()
-                }
-
-                fn visit_named_fields(&mut self, named_values: &::valuable::NamedValues<'_>) {
-                    named_values
-                        .iter()
-                        .for_each(|(field, value)| match field.name() {
-                            #(#arms)*
-                            _ => {}
-                        });
-                }
-            }
-        }
+        let factory = VisitImplFactory(&self.visitor_factory);
+        factory.make_named_fields(quote::quote! {
+            named_values
+                .iter()
+                .for_each(|(field, value)| match field.name() {
+                    #(#arms)*
+                    _ => {}
+                });
+        })
     }
 }
