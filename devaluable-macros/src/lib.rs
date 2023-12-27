@@ -1,42 +1,33 @@
-use proc_macro2::Span;
-use syn::DeriveInput;
+use proc_macro2::{Ident, Span};
+use syn::{Data, DataStruct, DeriveInput, Fields, FieldsNamed, Generics};
 
 trait FromValueImpl {
-    fn expand(self) -> proc_macro::TokenStream;
+    fn expand(&self) -> proc_macro::TokenStream;
 }
 
-struct NamedFieldVisitorImpl {
-    ident: proc_macro2::Ident,
-    generics: syn::Generics,
-    data: syn::Data,
-    target: proc_macro2::Ident,
+trait VisitorImpl {
+    fn ident(&self) -> &Ident;
+    fn definition(&self) -> proc_macro2::TokenStream;
+    fn into_target_impl(&self) -> proc_macro2::TokenStream;
+    fn visit_impl(&self) -> proc_macro2::TokenStream;
 }
 
-impl NamedFieldVisitorImpl {
-    fn for_type(input: DeriveInput) -> Self {
-        Self {
-            ident: proc_macro2::Ident::new(
-                &(input.ident.to_string() + "Visitor"),
-                Span::call_site(),
-            ),
-            target: input.ident,
-            generics: input.generics,
-            data: input.data,
-        }
-    }
+struct NamedFieldVisitor {
+    ident: Ident,
+    generics: Generics,
+    data: FieldsNamed,
+    target: Ident,
+}
 
-    fn ident(&self) -> &proc_macro2::Ident {
+impl VisitorImpl for NamedFieldVisitor {
+    fn ident(&self) -> &Ident {
         &self.ident
     }
 
     fn definition(&self) -> proc_macro2::TokenStream {
         let visitor_ident = &self.ident;
         let (_, type_generics, where_clause) = self.generics.split_for_impl();
-        let data = match &self.data {
-            syn::Data::Struct(data) => data,
-            _ => panic!("Expected struct, found enum or union"),
-        };
-        let fields = data.fields.iter().map(|field| {
+        let fields = self.data.named.iter().map(|field| {
             let ident = &field.ident;
             let ty = &field.ty;
             quote::quote!(#ident: #ty)
@@ -55,11 +46,7 @@ impl NamedFieldVisitorImpl {
         let target_type = &self.target;
         let (impl_generics, type_generics, where_clause) = self.generics.split_for_impl();
 
-        let data = match &self.data {
-            syn::Data::Struct(data) => data,
-            _ => panic!("Expected struct, found enum or union"),
-        };
-        let fields = data.fields.iter().map(|field| {
+        let fields = self.data.named.iter().map(|field| {
             let ident = &field.ident;
             quote::quote!(#ident: self.#ident)
         });
@@ -75,21 +62,10 @@ impl NamedFieldVisitorImpl {
         }
     }
 
-    fn expand(self) -> proc_macro2::TokenStream {
-        let definition = self.definition();
-        let into_target_impl = self.into_target_impl();
-        let Self {
-            ident: visitor_ident,
-            generics,
-            data,
-            ..
-        } = self;
-        let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
-        let data = match data {
-            syn::Data::Struct(data) => data,
-            _ => panic!("Expected struct, found enum or union"),
-        };
-        let arms = data.fields.iter().map(|field| {
+    fn visit_impl(&self) -> proc_macro2::TokenStream {
+        let visitor_ident = &self.ident;
+        let (impl_generics, type_generics, where_clause) = self.generics.split_for_impl();
+        let arms = self.data.named.iter().map(|field| {
             let string = field
                 .ident
                 .as_ref()
@@ -108,8 +84,6 @@ impl NamedFieldVisitorImpl {
         });
 
         quote::quote! {
-            #definition
-            #into_target_impl
             impl #impl_generics ::valuable::Visit for #visitor_ident #type_generics
                 #where_clause
             {
@@ -130,35 +104,25 @@ impl NamedFieldVisitorImpl {
     }
 }
 
-struct StructFromValueImpl {
-    visitor: NamedFieldVisitorImpl,
-    target_type: proc_macro2::Ident,
-    generics: syn::Generics,
+struct NamedStructImpl {
+    visitor: NamedFieldVisitor,
+    target_type: Ident,
+    generics: Generics,
 }
 
-impl StructFromValueImpl {
-    fn new(input: DeriveInput) -> Self {
-        Self {
-            target_type: input.ident.clone(),
-            generics: input.generics.clone(),
-            visitor: NamedFieldVisitorImpl::for_type(input),
-        }
-    }
-}
-
-impl FromValueImpl for StructFromValueImpl {
-    fn expand(self) -> proc_macro::TokenStream {
-        let Self {
-            visitor,
-            generics,
-            target_type,
-        } = self;
-        let visitor_type = visitor.ident().clone();
-        let visitor_definition = visitor.expand();
-        let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
+impl FromValueImpl for NamedStructImpl {
+    fn expand(&self) -> proc_macro::TokenStream {
+        let target_type = &self.target_type;
+        let visitor_type = self.visitor.ident();
+        let visitor_definition = self.visitor.definition();
+        let visitor_impl = self.visitor.visit_impl();
+        let visitor_into_impl = self.visitor.into_target_impl();
+        let (impl_generics, type_generics, where_clause) = self.generics.split_for_impl();
 
         let expanded = quote::quote! {
             #visitor_definition
+            #visitor_impl
+            #visitor_into_impl
 
             impl #impl_generics ::devaluable::FromValue for #target_type #type_generics
                 #where_clause
@@ -179,8 +143,29 @@ impl FromValueImpl for StructFromValueImpl {
     }
 }
 
+fn impl_factory(input: DeriveInput) -> Box<dyn FromValueImpl> {
+    let ident = Ident::new(&(input.ident.to_string() + "Visitor"), Span::call_site());
+    match input.data {
+        Data::Struct(DataStruct {
+            fields: Fields::Named(data),
+            ..
+        }) => Box::new(NamedStructImpl {
+            target_type: input.ident.clone(),
+            generics: input.generics.clone(),
+            visitor: NamedFieldVisitor {
+                ident,
+                generics: input.generics,
+                data,
+                target: input.ident,
+            },
+        }),
+        _ => panic!("Only structs with named fields are supported"),
+    }
+}
+
 #[proc_macro_derive(FromValue)]
 pub fn derive_from_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = syn::parse_macro_input!(input as DeriveInput);
-    StructFromValueImpl::new(input).expand()
+    let from_value = impl_factory(input);
+    from_value.expand()
 }
