@@ -84,8 +84,9 @@ impl<'a> IntoImplFactory<'a> {
 
 struct VisitImplFactory<'a>(pub(crate) &'a StatementFactory);
 impl<'a> VisitImplFactory<'a> {
-    pub fn make_named_fields(
+    fn make(
         &self,
+        signature: proc_macro2::TokenStream,
         implementation: proc_macro2::TokenStream,
     ) -> proc_macro2::TokenStream {
         let trait_name = quote::quote!(::valuable::Visit);
@@ -96,11 +97,23 @@ impl<'a> VisitImplFactory<'a> {
                     unreachable!()
                 }
 
-                fn visit_named_fields(&mut self, named_values: &::valuable::NamedValues<'_>) {
+                #signature {
                     #implementation
                 }
             }
         }
+    }
+
+    pub fn make_named_fields(
+        &self,
+        implementation: proc_macro2::TokenStream,
+    ) -> proc_macro2::TokenStream {
+        self.make(
+            quote::quote! {
+                fn visit_named_fields(&mut self, named_values: &::valuable::NamedValues<'_>)
+            },
+            implementation,
+        )
     }
 }
 
