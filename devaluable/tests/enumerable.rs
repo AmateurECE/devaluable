@@ -8,12 +8,6 @@ enum TestEnum {
     VariantWithNamedValue { test: bool },
 }
 
-impl Default for TestEnum {
-    fn default() -> Self {
-        TestEnum::Variant
-    }
-}
-
 #[derive(Default)]
 struct VariantWithUnnamedValueVisitor(bool);
 impl valuable::Visit for VariantWithUnnamedValueVisitor {
