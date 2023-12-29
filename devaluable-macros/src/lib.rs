@@ -1,5 +1,5 @@
 use proc_macro2::{Ident, Span};
-use syn::{Data, DataStruct, DeriveInput, Fields, Generics};
+use syn::{Data, DataEnum, DataStruct, DeriveInput, Fields, Generics};
 
 mod named_field_visitor;
 mod unnamed_field_visitor;
@@ -205,34 +205,161 @@ impl FromValueImpl for UnnamedStructImpl {
     }
 }
 
+fn make_visitor_ident(ident: &Ident) -> Ident {
+    Ident::new(&(ident.to_string() + "Visitor"), Span::call_site())
+}
+
+struct EnumImpl {
+    factory: StatementFactory,
+    generics: Generics,
+    data: DataEnum,
+}
+
+impl FromValueImpl for EnumImpl {
+    fn expand(&self) -> proc_macro::TokenStream {
+        let variant_arms = self
+            .data
+            .variants
+            .iter()
+            .map(|variant| match &variant.fields {
+                Fields::Named(_) => {
+                    let name_string = variant.ident.to_string();
+                    let visitor_ident = make_visitor_ident(&variant.ident);
+                    quote::quote! {
+                        (#name_string, ::valuable::Fields::Named(_)) => {
+                            let mut visitor: #visitor_ident = ::core::default::Default::default();
+                            enumerable.visit(&mut visitor);
+                            Some(visitor.into())
+                        }
+                    }
+                }
+                Fields::Unnamed(_) => {
+                    let name_string = variant.ident.to_string();
+                    let visitor_ident = make_visitor_ident(&variant.ident);
+                    quote::quote! {
+                        (#name_string, ::valuable::Fields::Unnamed(_)) => {
+                            let mut visitor: #visitor_ident = ::core::default::Default::default();
+                            enumerable.visit(&mut visitor);
+                            Some(visitor.into())
+                        }
+                    }
+                }
+                Fields::Unit => {
+                    let variant_name = &variant.ident;
+                    let name_string = variant.ident.to_string();
+                    let enum_name = self.factory.ident();
+                    quote::quote!((#name_string, _) => Some(#enum_name::#variant_name))
+                }
+            });
+
+        let target_type = self.factory.ident().to_string();
+        let factory = FromValueImplFactory(&self.factory);
+        let from_value_impl = factory.make(quote::quote! {
+            if let ::valuable::Value::Enumerable(enumerable) = value {
+                if let (#target_type, ::valuable::Variant::Static(variant)) =
+                    (enumerable.definition().name(), enumerable.variant())
+                {
+                    match (variant.name(), variant.fields()) {
+                        #(#variant_arms ,)*
+                        _ => None,
+                    }
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        });
+
+        let variant_impls = self.data.variants.iter().map(|variant| {
+            let visitor_ident = make_visitor_ident(&variant.ident);
+            match &variant.fields {
+                Fields::Named(named) => {
+                    let enum_ident = self.factory.ident();
+                    let variant_ident = &variant.ident;
+                    let visitor = NamedFieldVisitor::with_constructed_type(
+                        named.clone(),
+                        quote::quote!(#enum_ident),
+                        quote::quote!(#enum_ident::#variant_ident),
+                        StatementFactory::new(visitor_ident, self.generics.clone()),
+                    );
+
+                    let definition = visitor.definition();
+                    let visit_impl = visitor.visit_impl();
+                    let into_target_impl = visitor.into_target_impl();
+                    quote::quote! {
+                        #definition
+                        #visit_impl
+                        #into_target_impl
+                    }
+                }
+
+                Fields::Unnamed(unnamed) => {
+                    let enum_ident = self.factory.ident();
+                    let variant_ident = &variant.ident;
+                    let visitor = UnnamedFieldVisitor::with_constructed_type(
+                        unnamed.clone(),
+                        quote::quote!(#enum_ident),
+                        quote::quote!(#enum_ident::#variant_ident),
+                        StatementFactory::new(visitor_ident, self.generics.clone()),
+                    );
+
+                    let definition = visitor.definition();
+                    let visit_impl = visitor.visit_impl();
+                    let into_target_impl = visitor.into_target_impl();
+                    quote::quote! {
+                        #definition
+                        #visit_impl
+                        #into_target_impl
+                    }
+                }
+
+                // No visitor for unit variants
+                Fields::Unit => quote::quote!(),
+            }
+        });
+
+        quote::quote! {
+            #(#variant_impls)*
+            #from_value_impl
+        }
+        .into()
+    }
+}
+
 fn impl_factory(input: DeriveInput) -> Box<dyn FromValueImpl> {
+    let target = &input.ident;
     let ident = Ident::new(&(input.ident.to_string() + "Visitor"), Span::call_site());
-    let target_factory = StatementFactory::new(input.ident, input.generics.clone());
-    let visitor_factory = StatementFactory::new(ident, input.generics);
+    let target_factory = StatementFactory::new(input.ident.clone(), input.generics.clone());
     match input.data {
         Data::Struct(DataStruct {
             fields: Fields::Named(data),
             ..
         }) => Box::new(NamedStructImpl {
             factory: target_factory.clone(),
-            visitor: NamedFieldVisitor {
+            visitor: NamedFieldVisitor::new(
                 data,
-                target_factory,
-                visitor_factory,
-            },
+                quote::quote!(#target),
+                StatementFactory::new(ident, input.generics),
+            ),
         }),
         Data::Struct(DataStruct {
             fields: Fields::Unnamed(data),
             ..
         }) => Box::new(UnnamedStructImpl {
-            factory: target_factory.clone(),
-            visitor: UnnamedFieldVisitor {
+            visitor: UnnamedFieldVisitor::new(
                 data,
-                target_factory,
-                visitor_factory,
-            },
+                quote::quote!(#target),
+                StatementFactory::new(ident, input.generics),
+            ),
+            factory: target_factory,
         }),
-        _ => panic!("Enums and unions are not supported"),
+        Data::Enum(data) => Box::new(EnumImpl {
+            factory: target_factory,
+            generics: input.generics,
+            data,
+        }),
+        _ => panic!("Unions are not supported"),
     }
 }
 

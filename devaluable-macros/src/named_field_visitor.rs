@@ -3,9 +3,34 @@ use syn::FieldsNamed;
 use crate::{IntoImplFactory, StatementFactory, VisitImplFactory};
 
 pub struct NamedFieldVisitor {
-    pub(crate) data: FieldsNamed,
-    pub(crate) target_factory: StatementFactory,
-    pub(crate) visitor_factory: StatementFactory,
+    data: FieldsNamed,
+    target_type: proc_macro2::TokenStream,
+    construted_type: proc_macro2::TokenStream,
+    visitor_factory: StatementFactory,
+}
+
+impl NamedFieldVisitor {
+    pub fn new(
+        data: FieldsNamed,
+        target_type: proc_macro2::TokenStream,
+        visitor_factory: StatementFactory,
+    ) -> Self {
+        Self::with_constructed_type(data, target_type.clone(), target_type, visitor_factory)
+    }
+
+    pub fn with_constructed_type(
+        data: FieldsNamed,
+        target_type: proc_macro2::TokenStream,
+        construted_type: proc_macro2::TokenStream,
+        visitor_factory: StatementFactory,
+    ) -> Self {
+        Self {
+            data,
+            construted_type,
+            target_type,
+            visitor_factory,
+        }
+    }
 }
 
 impl crate::VisitorImpl for NamedFieldVisitor {
@@ -35,12 +60,13 @@ impl crate::VisitorImpl for NamedFieldVisitor {
             quote::quote!(#ident: self.#ident)
         });
 
-        let target_type = self.target_factory.ident();
+        let target_type = &self.target_type;
+        let construted_type = &self.construted_type;
         let factory = IntoImplFactory(&self.visitor_factory);
         factory.make(
             &quote::quote!(#target_type),
             quote::quote! {
-                #target_type {
+                #construted_type {
                     #(#fields ,)*
                 }
             },

@@ -3,9 +3,34 @@ use syn::FieldsUnnamed;
 use crate::{IntoImplFactory, StatementFactory, VisitImplFactory};
 
 pub struct UnnamedFieldVisitor {
-    pub(crate) data: FieldsUnnamed,
-    pub(crate) target_factory: StatementFactory,
-    pub(crate) visitor_factory: StatementFactory,
+    data: FieldsUnnamed,
+    visitor_factory: StatementFactory,
+    constructed_type: proc_macro2::TokenStream,
+    target_type: proc_macro2::TokenStream,
+}
+
+impl UnnamedFieldVisitor {
+    pub fn new(
+        data: FieldsUnnamed,
+        target_type: proc_macro2::TokenStream,
+        visitor_factory: StatementFactory,
+    ) -> Self {
+        Self::with_constructed_type(data, target_type.clone(), target_type, visitor_factory)
+    }
+
+    pub fn with_constructed_type(
+        data: FieldsUnnamed,
+        target_type: proc_macro2::TokenStream,
+        constructed_type: proc_macro2::TokenStream,
+        visitor_factory: StatementFactory,
+    ) -> Self {
+        Self {
+            target_type,
+            constructed_type,
+            data,
+            visitor_factory,
+        }
+    }
 }
 
 impl crate::VisitorImpl for UnnamedFieldVisitor {
@@ -29,12 +54,13 @@ impl crate::VisitorImpl for UnnamedFieldVisitor {
             quote::quote!(self.#index)
         });
 
-        let target_type = self.target_factory.ident();
+        let target_type = &self.target_type;
+        let constructed_type = &self.constructed_type;
         let factory = IntoImplFactory(&self.visitor_factory);
         factory.make(
             &quote::quote!(#target_type),
             quote::quote! {
-                #target_type (
+                #constructed_type (
                     #(#fields ,)*
                 )
             },
