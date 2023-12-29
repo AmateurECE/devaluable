@@ -53,7 +53,7 @@ impl StatementFactory {
 struct FromValueImplFactory<'a>(pub(crate) &'a StatementFactory);
 impl<'a> FromValueImplFactory<'a> {
     pub fn make(&self, implementation: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
-        let trait_name = quote::quote!(FromValue);
+        let trait_name = quote::quote!(::devaluable::FromValue);
         let impl_statement = self.0.make_impl(&trait_name);
         quote::quote! {
             #impl_statement {
